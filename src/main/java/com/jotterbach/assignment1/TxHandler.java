@@ -1,6 +1,5 @@
 package com.jotterbach.assignment1;
 
-import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -67,40 +66,21 @@ public class TxHandler {
     }
 
     private boolean allSignaturesValid(Transaction tx) {
-//        List<Transaction.Input> inputs = tx.getInputs();
         for (int i = 0; i < tx.numInputs(); i++){
             Transaction.Input input = tx.getInput(i);
             UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
             Transaction.Output previousTxOutput = this.utxoPool.getTxOutput(utxo);
-            if (previousTxOutput == null) { return false; }
-            PublicKey publicKey = previousTxOutput.address;
-            byte[] message = tx.getRawDataToSign(i);
-            byte[] signature = input.signature;
-            //rule number 2
-            if (!Crypto.verifySignature(publicKey, message, signature)) {
+            if (previousTxOutput == null) {
+                return false;
+            }
+            if (!Crypto.verifySignature(previousTxOutput.address,
+                    tx.getRawDataToSign(i),
+                    input.signature)) {
                 return false;
             }
 
         }
         return true;
-//        for (Transaction.Input input : inputs) {
-//            boolean isValid = Crypto.verifySignature(
-//                        tx.getOutput(input.outputIndex).address,
-//                        tx.getRawDataToSign(input.outputIndex),
-//                        input.signature);
-//            if (!isValid) {
-//                return false;
-//            }
-//        }
-//        return tx.getInputs().stream().allMatch(input -> {
-//            PublicKey publicKey = tx.getOutput(input.outputIndex).address;
-//            byte[] txRawDataToSign = tx.getRawDataToSign(input.outputIndex);
-//            return publicKey != null &&
-//                    txRawDataToSign != null &&
-//                    Crypto.verifySignature(publicKey,
-//                            txRawDataToSign,
-//                            input.signature);
-//        });
     }
 
     private boolean noMultiplyClaimedUtxo(List<UTXO> currentUtxos) {
