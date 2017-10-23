@@ -1,12 +1,13 @@
-package com.jotterbach.assignment1;
+package com.jotterbach.scroogecoin;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TxHandler {
 
     private UTXOPool utxoPool;
+    private UTXOPool claimedUtxos = new UTXOPool();
+    private List<Transaction.Input> claimedInputs = new ArrayList<>();
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
      * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
@@ -48,17 +49,29 @@ public class TxHandler {
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
         // IMPLEMENT THIS
-        Transaction[] validTxn = Arrays.stream(possibleTxs).filter(this::isValidTx).toArray(Transaction[]::new);
-        for (Transaction tx : validTxn) {
-            tx.getInputs().forEach(this::removeUtxo);
+
+        List<Transaction> validTxn = new ArrayList<>();
+        for (Transaction tx : possibleTxs) {
+            if (isValidTx(tx)) {
+                validTxn.add(tx);
+                tx.getInputs().forEach(this::removeUtxo);
+                addNewUtxos(tx);
+            }
         }
-        return validTxn;
+        return validTxn.toArray(new Transaction[validTxn.size()]);
     }
 
+
     private void removeUtxo (Transaction.Input input) {
-        int outIdx = input.outputIndex;
-        UTXO utxo = this.utxoPool.getAllUTXO().get(outIdx);
+        UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
         this.utxoPool.removeUTXO(utxo);
+    }
+
+    private void addNewUtxos(Transaction tx) {
+        for (int i = 0; i < tx.numOutputs(); i++){
+            UTXO utxo = new UTXO(tx.getHash(), i);
+            this.utxoPool.addUTXO(utxo, tx.getOutput(i));
+        }
     }
 
     private boolean allcurrentUtxosInUtxoPool(List<UTXO> currentUtxos) {
@@ -100,5 +113,4 @@ public class TxHandler {
                 .sum();
         return inputTransactionSum >= currentTXOutputSum;
     }
-
 }

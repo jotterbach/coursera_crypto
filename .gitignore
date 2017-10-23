@@ -6,3 +6,4 @@ gradle/
 *.ipr
 *.iws
 assignment_1/
+out/

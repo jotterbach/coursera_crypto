@@ -1,4 +1,4 @@
-package com.jotterbach.assignment1;
+package com.jotterbach.scroogecoin;
 
 import java.util.Arrays;
 

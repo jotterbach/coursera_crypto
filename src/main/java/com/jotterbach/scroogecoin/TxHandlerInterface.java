@@ -1,4 +1,4 @@
-package com.jotterbach.assignment1;
+package com.jotterbach.scroogecoin;
 
 
 public interface TxHandlerInterface {

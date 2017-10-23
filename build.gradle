@@ -7,5 +7,5 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.+'
-    testCompile group: 'commons-codec', name: 'commons-codec', version: '1.4'
+    testCompile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.58'
 }
