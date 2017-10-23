@@ -5,5 +5,5 @@ gradle/
 *.iml
 *.ipr
 *.iws
-assignment_1/
+assignment_*
 out/

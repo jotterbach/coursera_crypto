@@ -51,6 +51,9 @@ public class TxHandler {
         // IMPLEMENT THIS
 
         List<Transaction> validTxn = new ArrayList<>();
+        // Atomicity is the key. Streaming makes this hard! We need to ensure that a validated transaction is added
+        // to the output Transactions and that the corresponding UTXO is removed at the same time so that a new TX will
+        // not correctly validate!
         for (Transaction tx : possibleTxs) {
             if (isValidTx(tx)) {
                 validTxn.add(tx);
@@ -63,6 +66,7 @@ public class TxHandler {
 
 
     private void removeUtxo (Transaction.Input input) {
+        // Ensure to remove correct UTXO from the pool!
         UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
         this.utxoPool.removeUTXO(utxo);
     }
