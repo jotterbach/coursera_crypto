@@ -2,10 +2,9 @@ package com.jotterbach.blockchain;// Block Chain should maintain only limited bl
 // You should not have all the blocks added to the block chain in memory 
 // as it would cause a memory overflow.
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class BlockChain {
     public static final int CUT_OFF_AGE = 10;
@@ -14,14 +13,16 @@ public class BlockChain {
         public Block b;
         public BlockNode parent;
         public List<BlockNode> children = new ArrayList<>();
-        public int height;
+        private int height;
+        private int age;
 
         private UTXOPool utxoPool;
 
-        public BlockNode(Block b, BlockNode parent, UTXOPool utxoPool) {
+        public BlockNode(Block b, BlockNode parent, UTXOPool utxoPool, int age) {
             this.b = b;
             this.parent = parent;
             this.utxoPool = utxoPool;
+            this.age = age;
 
             // handle genesis block
             if (parent == null) {
@@ -35,11 +36,19 @@ public class BlockChain {
         public UTXOPool getUtxoPoolCopy() {
             return new UTXOPool(utxoPool);
         }
+
+        public int getAge() {
+            return age;
+        }
+
+        public int getHeight() {
+            return height;
+        }
     }
 
     private Map<ByteArrayWrapper, BlockNode> blockChain = new HashMap<>();
     private TransactionPool txPool = new TransactionPool();
-    private BlockNode maxHeightNode;
+    private static AtomicInteger age = new AtomicInteger(0);
 
     /**
      * create an empty block chain with just a genesis block. Assume {@code genesisBlock} is a valid
@@ -47,19 +56,34 @@ public class BlockChain {
      */
     public BlockChain(Block genesisBlock) {
         UTXOPool uPool = getUtxoPoolFromCoinbase(genesisBlock);
-        BlockNode bn = new BlockNode(genesisBlock, null, uPool);
+        BlockNode bn = new BlockNode(genesisBlock, null, uPool, age.incrementAndGet());
         this.blockChain.put(wrapper(genesisBlock.getHash()), bn);
-        this.maxHeightNode = bn;
     }
 
+    private BlockNode getMaxHeightNode() {
+        Map<Integer, List<BlockNode>> groupedBlockNodes = blockChain.values().stream()
+                .collect(Collectors.groupingBy(BlockNode::getHeight, Collectors.toList()));
+
+        int max_height = Collections.max(groupedBlockNodes.keySet());
+
+        List<BlockNode> maxHeightNodes = groupedBlockNodes.get(max_height);
+        BlockNode oldestNode = maxHeightNodes.get(0);
+
+        for (BlockNode bn : maxHeightNodes) {
+            if (bn.getAge() < oldestNode.getAge()) {
+                oldestNode = bn;
+            }
+        }
+        return oldestNode;
+    }
     /** Get the maximum height block */
     public Block getMaxHeightBlock() {
-        return maxHeightNode.b;
+        return getMaxHeightNode().b;
     }
 
     /** Get the UTXOPool for mining a new block on top of max height block */
     public UTXOPool getMaxHeightUTXOPool() {
-        return maxHeightNode.utxoPool;
+        return getMaxHeightNode().utxoPool;
     }
 
     /** Get the transaction pool to mine a new block */
@@ -93,9 +117,9 @@ public class BlockChain {
             return false;
         }
         UTXOPool utxoPool = getUtxoPoolFromCoinbase(block);
-        BlockNode bn = new BlockNode(block, maxHeightNode, utxoPool);
+        BlockNode maxHeightNode = getMaxHeightNode();
+        BlockNode bn = new BlockNode(block, maxHeightNode, utxoPool, age.incrementAndGet());
         blockChain.put(wrapper(block.getHash()), bn);
-        maxHeightNode = bn;
         return true;
 
     }
@@ -115,7 +139,7 @@ public class BlockChain {
 
     private boolean isWithinCutoff(Block b) {
         BlockNode parentBlock = blockChain.get(wrapper(b.getPrevBlockHash()));
-        return parentBlock.height + 1 > maxHeightNode.height - CUT_OFF_AGE;
+        return parentBlock.height + 1 > getMaxHeightNode().height - CUT_OFF_AGE;
     }
 
     /** Add a transaction to the transaction pool */

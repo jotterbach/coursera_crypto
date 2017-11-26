@@ -124,7 +124,7 @@ public class TxHandler {
         return inputTransactionSum >= currentTXOutputSum;
     }
 
-    public UTXOPool getUtxoPool() {
+    public UTXOPool getUTXOPool() {
         return utxoPool;
     }
 }
